@@ -1,0 +1,14 @@
+{
+  "name": "capcipcup-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx autopilot.ts"
+  },
+  "pnpm": {
+    "overrides": {
+      "@x402/evm": "^2.11.0"
+    }
+  }
+}

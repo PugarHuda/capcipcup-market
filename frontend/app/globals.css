@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bitcoin-orange: #F7931A;
+  --mezo-red: #E5383B;
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
