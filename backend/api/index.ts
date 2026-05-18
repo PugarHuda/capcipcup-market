@@ -69,7 +69,7 @@ async function callOpenRouter(model: string, systemPrompt: string, input: string
 
 // --- Routes ---
 
-app.get("/", (_req, res) => {
+app.get("/", (_req: any, res: any) => {
   res.json({
     name: "CapCipCup Market API",
     version: "0.1.0",
@@ -85,11 +85,11 @@ app.get("/", (_req, res) => {
   });
 });
 
-app.get("/health", (_req, res) => {
+app.get("/health", (_req: any, res: any) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-app.get("/api/services", (_req, res) => {
+app.get("/api/services", (_req: any, res: any) => {
   const services = Object.entries(SERVICE_CONFIGS).map(([id, svc]) => {
     const m = metrics.get(id) || { total: 0, success: 0, totalMs: 0 };
     return {
@@ -109,7 +109,7 @@ app.get("/api/services", (_req, res) => {
   res.json({ services });
 });
 
-app.get("/api/service/:id/try", async (req, res) => {
+app.get("/api/service/:id/try", async (req: any, res: any) => {
   const serviceId = String(req.params.id);
   const input = String(req.query.input || req.query.text || "");
   const wallet = String(req.headers["x-wallet-address"] || req.ip || "anon");
@@ -145,7 +145,7 @@ app.get("/api/service/:id/try", async (req, res) => {
   }
 });
 
-app.get("/api/service/:id", async (req, res) => {
+app.get("/api/service/:id", async (req: any, res: any) => {
   const serviceId = String(req.params.id);
   const input = String(req.query.input || req.query.text || "");
 
@@ -170,7 +170,7 @@ app.get("/api/service/:id", async (req, res) => {
 // The frontend transfers MUSD to the provider address, then calls this with the tx hash
 const verifiedPayments = new Set<string>();
 
-app.post("/api/service/:id/paid", async (req, res) => {
+app.post("/api/service/:id/paid", async (req: any, res: any) => {
   const serviceId = String(req.params.id);
   const { input, txHash, payer } = req.body;
 
@@ -215,7 +215,7 @@ app.post("/api/service/:id/paid", async (req, res) => {
   }
 });
 
-app.get("/api/metrics/:id", (req, res) => {
+app.get("/api/metrics/:id", (req: any, res: any) => {
   const serviceId = String(req.params.id);
   const m = metrics.get(serviceId) || { total: 0, success: 0, totalMs: 0 };
   res.json({
