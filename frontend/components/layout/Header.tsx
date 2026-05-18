@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { injected } from "wagmi/connectors";
 import { formatEther, parseEther } from "viem";
 import { ERC20_ABI, MUSD_ADDRESS } from "@/lib/contracts";
 import { useToast } from "@/components/ui/Toast";
@@ -25,10 +24,11 @@ const MINT_ABI = [
 
 export function Header() {
   const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const { toast } = useToast();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showConnectors, setShowConnectors] = useState(false);
 
   const { data: musdBalance } = useReadContract({
     address: MUSD_ADDRESS as `0x${string}`,
@@ -105,6 +105,9 @@ export function Header() {
             <Link href="/provider" className="hover:text-zinc-100 transition-colors">
               Provide
             </Link>
+            <Link href="/analytics" className="hover:text-zinc-100 transition-colors">
+              Analytics
+            </Link>
           </nav>
         </div>
 
@@ -144,12 +147,27 @@ export function Header() {
               {address?.slice(0, 6)}...{address?.slice(-4)}
             </button>
           ) : (
-            <button
-              onClick={() => connect({ connector: injected() })}
-              className="px-4 py-2 rounded-lg bg-[#F7931A] text-black text-sm font-medium hover:bg-[#F7931A]/90 transition-colors"
-            >
-              Connect Wallet
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowConnectors(!showConnectors)}
+                className="px-4 py-2 rounded-lg bg-[#F7931A] text-black text-sm font-medium hover:bg-[#F7931A]/90 transition-colors"
+              >
+                Connect Wallet
+              </button>
+              {showConnectors && (
+                <div className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl z-50 overflow-hidden">
+                  {connectors.map((connector) => (
+                    <button
+                      key={connector.uid}
+                      onClick={() => { connect({ connector }); setShowConnectors(false); }}
+                      className="w-full px-4 py-3 text-left text-sm text-zinc-300 hover:bg-zinc-800 transition-colors border-b border-zinc-800 last:border-0"
+                    >
+                      {connector.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Mobile hamburger */}
@@ -175,6 +193,7 @@ export function Header() {
             <Link href="/" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Explore</Link>
             <Link href="/vault" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Agent Vault</Link>
             <Link href="/provider" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Provide</Link>
+            <Link href="/analytics" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Analytics</Link>
           </nav>
           {isConnected && address && (
             <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-800">

@@ -1,5 +1,5 @@
 import { http, createConfig } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { injected, walletConnect } from "wagmi/connectors";
 import { defineChain } from "viem";
 
 export const mezoTestnet = defineChain({
@@ -14,9 +14,14 @@ export const mezoTestnet = defineChain({
   },
 });
 
+const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "capcipcup-market-demo";
+
 export const wagmiConfig = createConfig({
   chains: [mezoTestnet],
-  connectors: [injected()],
+  connectors: [
+    injected(),
+    walletConnect({ projectId, showQrModal: true }),
+  ],
   transports: {
     [mezoTestnet.id]: http(),
   },

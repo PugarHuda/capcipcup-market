@@ -13,21 +13,48 @@ app.use(cors({
 const freeTierUsage = new Map<string, number>();
 const metrics = new Map<string, { total: number; success: number; totalMs: number }>();
 
-const SERVICE_CONFIGS: Record<string, { name: string; model: string; systemPrompt: string }> = {
+const SERVICE_CONFIGS: Record<string, { name: string; model: string; systemPrompt: string; category: string; price: string }> = {
   "1": {
     name: "Text Summarizer",
     model: "openai/gpt-oss-120b:free",
     systemPrompt: "You are a concise text summarizer. Summarize the given text in 2-3 sentences.",
+    category: "text",
+    price: "$0.005",
   },
   "2": {
     name: "Sentiment Analyzer",
     model: "openai/gpt-oss-120b:free",
     systemPrompt: "You are a sentiment analyzer. Analyze the sentiment of the given text. Respond with: sentiment (positive/negative/neutral), confidence (0-100), and a one-sentence explanation.",
+    category: "analysis",
+    price: "$0.005",
   },
   "3": {
     name: "Code Explainer",
     model: "openai/gpt-oss-120b:free",
     systemPrompt: "You are a code explainer. Explain what the given code does in simple terms. Keep it under 3 sentences.",
+    category: "code",
+    price: "$0.005",
+  },
+  "4": {
+    name: "Text Summarizer Pro",
+    model: "nvidia/nemotron-3-super:free",
+    systemPrompt: "You are an expert text summarizer. Create a detailed but concise summary with key takeaways in bullet points. Include main points, conclusions, and any actionable items.",
+    category: "text",
+    price: "$0.01",
+  },
+  "5": {
+    name: "Code Reviewer",
+    model: "deepseek/deepseek-v4-flash:free",
+    systemPrompt: "You are a code reviewer. Analyze the given code for bugs, security issues, and improvements. Be concise: list issues as bullet points with severity (high/medium/low).",
+    category: "code",
+    price: "$0.008",
+  },
+  "6": {
+    name: "Translator (EN→ID)",
+    model: "openai/gpt-oss-120b:free",
+    systemPrompt: "You are a translator. Translate the given English text into natural Indonesian (Bahasa Indonesia). Only output the translation, nothing else.",
+    category: "text",
+    price: "$0.003",
   },
 };
 
@@ -80,6 +107,7 @@ app.get("/", (_req: any, res: any) => {
       "GET /api/service/:id?input=...",
       "POST /api/service/:id/paid",
       "GET /api/metrics/:id",
+      "GET /api/stats",
       "GET /health",
     ],
   });
@@ -97,7 +125,8 @@ app.get("/api/services", (_req: any, res: any) => {
       name: svc.name,
       provider: "openrouter",
       model: svc.model,
-      priceMusd: "$0.005",
+      category: svc.category,
+      priceMusd: svc.price,
       freeTierLimit: 3,
       metrics: {
         totalRequests: m.total,
@@ -213,6 +242,30 @@ app.post("/api/service/:id/paid", async (req: any, res: any) => {
     verifiedPayments.delete(txHash);
     res.status(502).json({ error: "AI provider failed", detail: err.message });
   }
+});
+
+app.get("/api/stats", (_req: any, res: any) => {
+  let totalRequests = 0;
+  let totalSuccess = 0;
+  let totalMs = 0;
+  let totalPaid = verifiedPayments.size;
+
+  metrics.forEach((m) => {
+    totalRequests += m.total;
+    totalSuccess += m.success;
+    totalMs += m.totalMs;
+  });
+
+  res.json({
+    totalServices: Object.keys(SERVICE_CONFIGS).length,
+    totalRequests,
+    successRate: totalRequests > 0 ? ((totalSuccess / totalRequests) * 100).toFixed(1) + "%" : "N/A",
+    avgResponseTimeMs: totalRequests > 0 ? Math.round(totalMs / totalRequests) : 0,
+    totalPaidRequests: totalPaid,
+    totalMusdVolume: (totalPaid * 0.005).toFixed(3),
+    network: "Mezo Testnet",
+    uptime: process.uptime(),
+  });
 });
 
 app.get("/api/metrics/:id", (req: any, res: any) => {

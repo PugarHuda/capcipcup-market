@@ -5,6 +5,7 @@ export interface ServiceListItem {
   name: string;
   provider: string;
   model: string;
+  category?: string;
   priceMusd: string;
   freeTierLimit: number;
   metrics: {
