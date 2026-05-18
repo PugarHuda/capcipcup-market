@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { CONTRACT_ADDRESSES, AGENT_VAULT_ABI, ERC20_ABI, MUSD_ADDRESS } from "@/lib/contracts";
+import { useToast } from "@/components/ui/Toast";
 
 export default function VaultPage() {
   const { address, isConnected } = useAccount();
@@ -97,6 +98,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function DepositForm({ vaultAddress, onSuccess }: { vaultAddress: string; onSuccess: () => void }) {
   const [amount, setAmount] = useState("");
+  const { toast } = useToast();
   const { writeContract: approve, data: approveTx, reset: resetApprove } = useWriteContract();
   const { writeContract: deposit, data: depositTx, reset: resetDeposit } = useWriteContract();
   const [step, setStep] = useState<"idle" | "approving" | "depositing">("idle");
@@ -126,6 +128,7 @@ function DepositForm({ vaultAddress, onSuccess }: { vaultAddress: string; onSucc
 
   useEffect(() => {
     if (depositSuccess) {
+      toast(`Deposited ${amount} MUSD to vault`, "success", depositTx);
       onSuccess();
       setStep("idle");
       setAmount("");
@@ -178,6 +181,7 @@ function DepositForm({ vaultAddress, onSuccess }: { vaultAddress: string; onSucc
 
 function WithdrawForm({ vaultAddress, balance, onSuccess }: { vaultAddress: string; balance: string; onSuccess: () => void }) {
   const [amount, setAmount] = useState("");
+  const { toast } = useToast();
   const { writeContract, data: txHash, reset } = useWriteContract();
 
   const { isLoading, isSuccess } = useWaitForTransactionReceipt({
@@ -187,6 +191,7 @@ function WithdrawForm({ vaultAddress, balance, onSuccess }: { vaultAddress: stri
 
   useEffect(() => {
     if (isSuccess) {
+      toast(`Withdrew ${amount} MUSD from vault`, "success", txHash);
       onSuccess();
       setAmount("");
       reset();
@@ -227,6 +232,7 @@ function WithdrawForm({ vaultAddress, balance, onSuccess }: { vaultAddress: stri
 
 function SetLimitForm({ vaultAddress, currentLimit, onSuccess }: { vaultAddress: string; currentLimit: string; onSuccess: () => void }) {
   const [limit, setLimit] = useState("");
+  const { toast } = useToast();
   const { writeContract, data: txHash, reset } = useWriteContract();
 
   const { isLoading, isSuccess } = useWaitForTransactionReceipt({
@@ -236,6 +242,7 @@ function SetLimitForm({ vaultAddress, currentLimit, onSuccess }: { vaultAddress:
 
   useEffect(() => {
     if (isSuccess) {
+      toast(`Daily limit set to ${limit} MUSD`, "success", txHash);
       onSuccess();
       setLimit("");
       reset();
@@ -276,6 +283,7 @@ function SetLimitForm({ vaultAddress, currentLimit, onSuccess }: { vaultAddress:
 
 function OperatorForm({ vaultAddress, onSuccess }: { vaultAddress: string; onSuccess: () => void }) {
   const [operator, setOperator] = useState("");
+  const { toast } = useToast();
   const { writeContract: approveOp, data: approveTx, reset: resetApprove } = useWriteContract();
   const { writeContract: revokeOp, data: revokeTx, reset: resetRevoke } = useWriteContract();
 
@@ -291,6 +299,7 @@ function OperatorForm({ vaultAddress, onSuccess }: { vaultAddress: string; onSuc
 
   useEffect(() => {
     if (approveSuccess) {
+      toast(`Operator ${operator.slice(0, 8)}... approved`, "success", approveTx);
       onSuccess();
       setOperator("");
       resetApprove();
@@ -299,6 +308,7 @@ function OperatorForm({ vaultAddress, onSuccess }: { vaultAddress: string; onSuc
 
   useEffect(() => {
     if (revokeSuccess) {
+      toast(`Operator ${operator.slice(0, 8)}... revoked`, "success", revokeTx);
       onSuccess();
       setOperator("");
       resetRevoke();

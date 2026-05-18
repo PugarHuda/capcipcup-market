@@ -1,21 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { tryServiceFree, type InferenceResponse } from "@/lib/api";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { parseEther } from "viem";
+import { ERC20_ABI, MUSD_ADDRESS } from "@/lib/contracts";
+import { useToast } from "@/components/ui/Toast";
 
 interface PlaygroundProps {
   serviceId: string;
 }
 
+const PAYMENT_RECEIVER = process.env.NEXT_PUBLIC_PAYMENT_RECEIVER || "0xdbE1a6F994e3E4b6F6A7e36523e9a458C8Ed40Bb";
+const PRICE_MUSD = "0.005";
+
 export function Playground({ serviceId }: PlaygroundProps) {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
+  const { toast } = useToast();
   const [input, setInput] = useState("");
   const [result, setResult] = useState<InferenceResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+
+  const { writeContract: transferMusd, data: payTxHash, reset: resetTransfer } = useWriteContract();
+  const { isSuccess: payConfirmed, isLoading: payConfirming } = useWaitForTransactionReceipt({
+    hash: payTxHash,
+    query: { enabled: !!payTxHash },
+  });
+
+  useEffect(() => {
+    if (payConfirmed && payTxHash && paying) {
+      toast("Payment confirmed on-chain", "success", payTxHash);
+      callPaidEndpoint(payTxHash);
+    }
+  }, [payConfirmed, payTxHash]);
 
   async function handleTryFree() {
     if (!input.trim()) return;
@@ -34,14 +55,49 @@ export function Playground({ serviceId }: PlaygroundProps) {
   }
 
   function handlePayAndUse() {
-    const url = `${BACKEND_URL}/api/service/${serviceId}?input=${encodeURIComponent(input)}`;
-    window.open(url, "_blank");
+    if (!isConnected || !address || !input.trim()) return;
+    setError("");
+    setResult(null);
+    setPaying(true);
+    resetTransfer();
+
+    transferMusd({
+      address: MUSD_ADDRESS as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "transfer",
+      args: [PAYMENT_RECEIVER as `0x${string}`, parseEther(PRICE_MUSD)],
+    });
   }
+
+  async function callPaidEndpoint(txHash: string) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/service/${serviceId}/paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input, txHash, payer: address }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Payment failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      setResult(data);
+    } catch (err: any) {
+      setError(err.message || "Paid request failed");
+    } finally {
+      setPaying(false);
+      resetTransfer();
+    }
+  }
+
+  const isProcessing = loading || paying || payConfirming;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Service #{serviceId} Playground</h2>
+        <h2 className="text-2xl font-bold">Playground</h2>
         <p className="text-zinc-400 mt-1">Try it for free or pay per request with MUSD</p>
       </div>
 
@@ -53,22 +109,26 @@ export function Playground({ serviceId }: PlaygroundProps) {
           className="w-full h-32 rounded-lg bg-zinc-900 border border-zinc-800 p-4 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-[#F7931A] resize-none"
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={handleTryFree}
-            disabled={loading || !input.trim()}
+            disabled={isProcessing || !input.trim()}
             className="px-6 py-2.5 rounded-lg bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Processing..." : "Try Free"}
           </button>
           <button
             onClick={handlePayAndUse}
-            disabled={!input.trim()}
+            disabled={isProcessing || !input.trim() || !isConnected}
             className="px-6 py-2.5 rounded-lg bg-[#F7931A] text-black text-sm font-medium hover:bg-[#F7931A]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Pay $0.005 MUSD
+            {payConfirming ? "Confirming payment..." : paying ? "Processing..." : `Pay ${PRICE_MUSD} MUSD`}
           </button>
         </div>
+
+        {!isConnected && (
+          <p className="text-xs text-zinc-500">Connect wallet to use the paid endpoint.</p>
+        )}
       </div>
 
       {error && (
@@ -79,7 +139,7 @@ export function Playground({ serviceId }: PlaygroundProps) {
 
       {result && (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 space-y-3">
-          <div className="flex items-center gap-4 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
             <span>Model: {result.model}</span>
             <span>|</span>
             <span>{result.responseTimeMs}ms</span>

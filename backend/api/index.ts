@@ -3,7 +3,11 @@ import cors from "cors";
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "*" }));
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "x-wallet-address", "x-payer-address"],
+}));
 
 // --- In-memory state (resets per cold start, fine for hackathon) ---
 const freeTierUsage = new Map<string, number>();
@@ -74,6 +78,7 @@ app.get("/", (_req, res) => {
       "GET /api/services",
       "GET /api/service/:id/try?input=...",
       "GET /api/service/:id?input=...",
+      "POST /api/service/:id/paid",
       "GET /api/metrics/:id",
       "GET /health",
     ],
@@ -157,6 +162,55 @@ app.get("/api/service/:id", async (req, res) => {
 
     res.json({ serviceId, output: result.output, model: result.model, responseTimeMs: result.responseTimeMs, paidWith: "MUSD", network: "Mezo Testnet" });
   } catch (err: any) {
+    res.status(502).json({ error: "AI provider failed", detail: err.message });
+  }
+});
+
+// Paid endpoint via ERC20 MUSD transfer verification
+// The frontend transfers MUSD to the provider address, then calls this with the tx hash
+const verifiedPayments = new Set<string>();
+
+app.post("/api/service/:id/paid", async (req, res) => {
+  const serviceId = String(req.params.id);
+  const { input, txHash, payer } = req.body;
+
+  if (!input) return res.status(400).json({ error: "Missing 'input' in body" });
+  if (!txHash) return res.status(400).json({ error: "Missing 'txHash' in body" });
+  if (!payer) return res.status(400).json({ error: "Missing 'payer' in body" });
+
+  const svc = SERVICE_CONFIGS[serviceId];
+  if (!svc) return res.status(404).json({ error: "Service not found" });
+
+  if (verifiedPayments.has(txHash)) {
+    return res.status(409).json({ error: "Payment already used" });
+  }
+
+  // For hackathon demo: accept any valid-looking tx hash from a connected wallet
+  // In production, verify on-chain that the tx transferred the correct MUSD amount
+  if (!txHash.startsWith("0x") || txHash.length !== 66) {
+    return res.status(400).json({ error: "Invalid transaction hash format" });
+  }
+
+  verifiedPayments.add(txHash);
+
+  try {
+    const result = await callOpenRouter(svc.model, svc.systemPrompt, input);
+    const m = metrics.get(serviceId) || { total: 0, success: 0, totalMs: 0 };
+    m.total++; m.success++; m.totalMs += result.responseTimeMs;
+    metrics.set(serviceId, m);
+
+    res.json({
+      serviceId,
+      output: result.output,
+      model: result.model,
+      responseTimeMs: result.responseTimeMs,
+      paidWith: "MUSD",
+      txHash,
+      payer,
+      network: "Mezo Testnet",
+    });
+  } catch (err: any) {
+    verifiedPayments.delete(txHash);
     res.status(502).json({ error: "AI provider failed", detail: err.message });
   }
 });

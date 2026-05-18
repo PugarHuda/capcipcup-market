@@ -1,34 +1,123 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { parseEther, formatEther } from "viem";
 import { CONTRACT_ADDRESSES, SERVICE_REGISTRY_ABI, ERC20_ABI } from "@/lib/contracts";
+import { useToast } from "@/components/ui/Toast";
 
 const MOCK_MEZO_ADDRESS = process.env.NEXT_PUBLIC_MOCK_MEZO_ADDRESS || "";
 
 export default function ProviderPage() {
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
 
   if (!isConnected) {
     return (
       <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Register as Provider</h1>
+        <h1 className="text-3xl font-bold">Provider Dashboard</h1>
         <p className="text-zinc-400">
           Stake MEZO to list your AI service on the marketplace.
         </p>
         <div className="rounded-lg border border-zinc-800 p-8 text-center text-zinc-500">
-          Connect your wallet to register a service.
+          Connect your wallet to manage your services.
         </div>
       </div>
     );
   }
 
-  return <RegisterForm />;
+  return (
+    <div className="space-y-10">
+      <div>
+        <h1 className="text-3xl font-bold">Provider Dashboard</h1>
+        <p className="text-zinc-400 mt-2">Manage your AI services on CapCipCup.</p>
+      </div>
+      <MyServices address={address!} />
+      <RegisterForm />
+    </div>
+  );
+}
+
+function MyServices({ address }: { address: `0x${string}` }) {
+  const registryAddress = CONTRACT_ADDRESSES.serviceRegistry as `0x${string}`;
+  const { toast } = useToast();
+
+  const { data: services, refetch } = useReadContract({
+    address: registryAddress,
+    abi: SERVICE_REGISTRY_ABI,
+    functionName: "getServicesByOwner",
+    args: [address],
+    query: { enabled: !!registryAddress },
+  });
+
+  const { writeContract, data: txHash } = useWriteContract();
+  const { isLoading, isSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
+    query: { enabled: !!txHash },
+  });
+
+  if (isSuccess) {
+    toast("Service delisted. Stake returned.", "success", txHash);
+    refetch();
+  }
+
+  const serviceList = (services as any[]) || [];
+  const activeServices = serviceList.filter((s) => s.isActive);
+
+  if (activeServices.length === 0) {
+    return (
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-6 text-center">
+        <p className="text-zinc-500">You don't have any active services yet. Register one below.</p>
+      </div>
+    );
+  }
+
+  function handleDelist(serviceId: bigint) {
+    if (!registryAddress) return;
+    writeContract({
+      address: registryAddress,
+      abi: SERVICE_REGISTRY_ABI,
+      functionName: "delist",
+      args: [serviceId],
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">Your Active Services</h2>
+      <div className="grid gap-4">
+        {activeServices.map((svc: any) => (
+          <div key={Number(svc.id)} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">{svc.name}</h3>
+                <p className="text-xs text-zinc-500 mt-1">{svc.endpoint}</p>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-400 text-xs">Active</span>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
+              <span>Price: <strong className="text-[#F7931A]">{formatEther(svc.pricePerRequest)} MUSD</strong></span>
+              <span>Staked: <strong>{formatEther(svc.mezoStaked)} MEZO</strong></span>
+              <span>Free tier: <strong>{Number(svc.freeTierLimit)}</strong> requests</span>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => handleDelist(svc.id)}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg bg-red-900/50 text-red-400 text-xs font-medium hover:bg-red-800/50 transition-colors disabled:opacity-50"
+              >
+                {isLoading ? "Delisting..." : "Delist & Return Stake"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function RegisterForm() {
   const registryAddress = CONTRACT_ADDRESSES.serviceRegistry as `0x${string}`;
+  const { toast } = useToast();
 
   const [form, setForm] = useState({
     name: "",
@@ -54,6 +143,7 @@ function RegisterForm() {
   });
 
   if (isSuccess && step !== "done") {
+    toast(`Service "${form.name}" registered on-chain!`, "success", registerTx);
     setStep("done");
   }
 
@@ -92,8 +182,8 @@ function RegisterForm() {
 
   if (step === "done") {
     return (
-      <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Service Registered!</h1>
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold">Register New Service</h2>
         <div className="rounded-xl border border-emerald-800 bg-emerald-950/30 p-6 text-center">
           <p className="text-emerald-400 text-lg font-medium">
             Your service "{form.name}" is now live on CapCipCup.
@@ -101,19 +191,23 @@ function RegisterForm() {
           <p className="text-zinc-500 mt-2 text-sm">
             Staked {form.stakeAmount} MEZO. Users can now discover and pay for your service.
           </p>
+          <button
+            onClick={() => { setStep("form"); setForm({ name: "", endpoint: "", price: "0.005", metadataURI: "", freeTierLimit: "3", stakeAmount: "100" }); }}
+            className="mt-4 px-4 py-2 rounded-lg bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
+          >
+            Register Another
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <div>
-        <h1 className="text-3xl font-bold">Register as Provider</h1>
-        <p className="text-zinc-400 mt-2">
-          Stake MEZO to list your AI service. Users pay per request with MUSD.
-        </p>
-      </div>
+    <div className="space-y-6 max-w-2xl">
+      <h2 className="text-xl font-semibold">Register New Service</h2>
+      <p className="text-zinc-400 text-sm">
+        Stake MEZO to list your AI service. Users pay per request with MUSD.
+      </p>
 
       {(!registryAddress || !MOCK_MEZO_ADDRESS) && (
         <div className="rounded-lg border border-yellow-800 bg-yellow-950/30 p-4 text-sm text-yellow-400">

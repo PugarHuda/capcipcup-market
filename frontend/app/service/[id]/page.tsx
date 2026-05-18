@@ -3,23 +3,24 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Playground } from "@/components/services/Playground";
+import { ReviewSection } from "@/components/services/ReviewSection";
 import { fetchMetrics } from "@/lib/api";
 
 const SERVICE_META: Record<string, { name: string; description: string; model: string }> = {
   "1": {
     name: "Text Summarizer",
-    description: "Condenses long text into 2-3 key sentences using Llama 3.1 8B.",
-    model: "llama-3.1-8b-instant",
+    description: "Condenses long text into 2-3 key sentences using GPT-OSS 120B.",
+    model: "openai/gpt-oss-120b:free",
   },
   "2": {
     name: "Sentiment Analyzer",
     description: "Detects positive, negative, or neutral sentiment with confidence scoring.",
-    model: "llama-3.1-8b-instant",
+    model: "openai/gpt-oss-120b:free",
   },
   "3": {
     name: "Code Explainer",
-    description: "Explains what code does in plain English using Llama 3.3 70B.",
-    model: "llama-3.3-70b-versatile",
+    description: "Explains what code does in plain English using GPT-OSS 120B.",
+    model: "openai/gpt-oss-120b:free",
   },
 };
 
@@ -37,7 +38,7 @@ export default function ServiceDetailPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">{meta.name}</h1>
         <p className="text-zinc-400">{meta.description}</p>
-        <div className="flex items-center gap-4 text-sm text-zinc-500">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500">
           <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">{meta.model}</span>
           <span className="text-[#F7931A] font-medium">$0.005 MUSD/request</span>
           <span>3 free tries</span>
@@ -45,7 +46,7 @@ export default function ServiceDetailPage() {
       </div>
 
       {metrics && metrics.totalRequests > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
             <p className="text-xs text-zinc-500">Total Requests</p>
             <p className="text-lg font-semibold">{metrics.totalRequests}</p>
@@ -62,6 +63,10 @@ export default function ServiceDetailPage() {
       )}
 
       <Playground serviceId={id} />
+
+      <div className="border-t border-zinc-800 pt-8">
+        <ReviewSection serviceId={id} />
+      </div>
     </div>
   );
 }

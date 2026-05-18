@@ -158,6 +158,40 @@ export const SERVICE_REGISTRY_ABI = [
       },
     ],
   },
+  {
+    name: "updateEndpoint",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_serviceId", type: "uint256" },
+      { name: "_endpoint", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "updatePricing",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_serviceId", type: "uint256" },
+      { name: "_pricePerRequest", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "delist",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_serviceId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "serviceCount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const;
 
 export const REVIEW_SYSTEM_ABI = [
@@ -207,6 +241,16 @@ export const ERC20_ABI = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
