@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "installCommand": "npm install",
   "builds": [
     {
       "src": "api/index.ts",
@@ -14,7 +14,7 @@
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, x-wallet-address"
+        "Access-Control-Allow-Headers": "Content-Type, x-wallet-address, x-payer-address"
       }
     }
   ]

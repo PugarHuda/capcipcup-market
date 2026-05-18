@@ -6,6 +6,7 @@ dist/
 out/
 coverage/
 *.log
+pnpm-lock.yaml
 
 # Hardhat
 contracts/cache/
