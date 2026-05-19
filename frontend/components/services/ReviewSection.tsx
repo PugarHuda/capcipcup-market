@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { CONTRACT_ADDRESSES, REVIEW_SYSTEM_ABI } from "@/lib/contracts";
 
@@ -41,11 +41,13 @@ export function ReviewSection({ serviceId }: { serviceId: string }) {
     query: { enabled: !!txHash },
   });
 
-  if (isSuccess) {
-    refetchReviews();
-    reset();
-    setComment("");
-  }
+  useEffect(() => {
+    if (isSuccess) {
+      refetchReviews();
+      reset();
+      setComment("");
+    }
+  }, [isSuccess]);
 
   function handleSubmitReview() {
     if (!reviewSystemAddress) return;

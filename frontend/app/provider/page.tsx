@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther, formatEther } from "viem";
 import { CONTRACT_ADDRESSES, SERVICE_REGISTRY_ABI, ERC20_ABI } from "@/lib/contracts";
@@ -49,16 +49,19 @@ function MyServices({ address }: { address: `0x${string}` }) {
     query: { enabled: !!registryAddress },
   });
 
-  const { writeContract, data: txHash } = useWriteContract();
+  const { writeContract, data: txHash, reset } = useWriteContract();
   const { isLoading, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
     query: { enabled: !!txHash },
   });
 
-  if (isSuccess) {
-    toast("Service delisted. Stake returned.", "success", txHash);
-    refetch();
-  }
+  useEffect(() => {
+    if (isSuccess) {
+      toast("Service delisted. Stake returned.", "success", txHash);
+      refetch();
+      reset();
+    }
+  }, [isSuccess]);
 
   const serviceList = (services as any[]) || [];
   const activeServices = serviceList.filter((s) => s.isActive);
@@ -142,10 +145,12 @@ function RegisterForm() {
     query: { enabled: !!registerTx },
   });
 
-  if (isSuccess && step !== "done") {
-    toast(`Service "${form.name}" registered on-chain!`, "success", registerTx);
-    setStep("done");
-  }
+  useEffect(() => {
+    if (isSuccess && step !== "done") {
+      toast(`Service "${form.name}" registered on-chain!`, "success", registerTx);
+      setStep("done");
+    }
+  }, [isSuccess]);
 
   function handleApprove() {
     if (!registryAddress || !MOCK_MEZO_ADDRESS) return;

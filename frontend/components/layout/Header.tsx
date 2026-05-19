@@ -99,6 +99,9 @@ export function Header() {
             <Link href="/" className="hover:text-zinc-100 transition-colors">
               Explore
             </Link>
+            <Link href="/battle" className="hover:text-zinc-100 transition-colors">
+              Battle
+            </Link>
             <Link href="/vault" className="hover:text-zinc-100 transition-colors">
               Agent Vault
             </Link>
@@ -191,6 +194,7 @@ export function Header() {
         <div className="md:hidden border-t border-zinc-800 bg-zinc-950 px-4 py-4 space-y-3">
           <nav className="flex flex-col gap-3 text-sm text-zinc-400">
             <Link href="/" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Explore</Link>
+            <Link href="/battle" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Battle</Link>
             <Link href="/vault" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Agent Vault</Link>
             <Link href="/provider" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Provide</Link>
             <Link href="/analytics" onClick={() => setMobileOpen(false)} className="hover:text-zinc-100">Analytics</Link>

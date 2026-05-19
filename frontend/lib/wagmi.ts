@@ -14,14 +14,15 @@ export const mezoTestnet = defineChain({
   },
 });
 
-const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "capcipcup-market-demo";
+const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID || "";
+
+const connectors = projectId
+  ? [injected(), walletConnect({ projectId, showQrModal: true })]
+  : [injected()];
 
 export const wagmiConfig = createConfig({
   chains: [mezoTestnet],
-  connectors: [
-    injected(),
-    walletConnect({ projectId, showQrModal: true }),
-  ],
+  connectors,
   transports: {
     [mezoTestnet.id]: http(),
   },

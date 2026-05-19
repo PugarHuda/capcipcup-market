@@ -40,18 +40,12 @@ export function ServiceCard({ id, name, model, priceMusd, freeTierLimit, metrics
           </p>
         )}
 
-        <div className="flex gap-3 pt-2">
+        <div className="pt-2">
           <Link
             href={`/service/${id}`}
-            className="flex-1 text-center px-4 py-2 rounded-lg bg-zinc-800 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors"
+            className="block w-full text-center px-4 py-2.5 rounded-lg bg-[#F7931A] text-black text-sm font-medium hover:bg-[#F7931A]/90 transition-colors"
           >
-            Try Free
-          </Link>
-          <Link
-            href={`/service/${id}`}
-            className="flex-1 text-center px-4 py-2 rounded-lg bg-[#F7931A] text-black text-sm font-medium hover:bg-[#F7931A]/90 transition-colors"
-          >
-            Use Service
+            Try Service →
           </Link>
         </div>
       </div>

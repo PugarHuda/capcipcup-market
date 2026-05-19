@@ -83,7 +83,7 @@ export default function ServiceDetailPage() {
         </div>
       )}
 
-      <Playground serviceId={id} />
+      <Playground serviceId={id} priceMusd={meta.price.replace("$", "")} />
 
       <div className="border-t border-zinc-800 pt-8">
         <ReviewSection serviceId={id} />

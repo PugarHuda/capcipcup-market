@@ -9,12 +9,22 @@ import { useToast } from "@/components/ui/Toast";
 
 interface PlaygroundProps {
   serviceId: string;
+  priceMusd?: string;
 }
 
 const PAYMENT_RECEIVER = process.env.NEXT_PUBLIC_PAYMENT_RECEIVER || "0xdbE1a6F994e3E4b6F6A7e36523e9a458C8Ed40Bb";
-const PRICE_MUSD = "0.005";
 
-export function Playground({ serviceId }: PlaygroundProps) {
+const SERVICE_PRICES: Record<string, string> = {
+  "1": "0.005",
+  "2": "0.005",
+  "3": "0.005",
+  "4": "0.01",
+  "5": "0.008",
+  "6": "0.003",
+};
+
+export function Playground({ serviceId, priceMusd }: PlaygroundProps) {
+  const PRICE_MUSD = priceMusd || SERVICE_PRICES[serviceId] || "0.005";
   const { address, isConnected } = useAccount();
   const { toast } = useToast();
   const [input, setInput] = useState("");
@@ -36,7 +46,8 @@ export function Playground({ serviceId }: PlaygroundProps) {
       toast("Payment confirmed on-chain", "success", payTxHash);
       callPaidEndpoint(payTxHash);
     }
-  }, [payConfirmed, payTxHash]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payConfirmed]);
 
   async function handleTryFree() {
     if (!input.trim()) return;

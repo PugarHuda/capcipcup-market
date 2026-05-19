@@ -6,11 +6,15 @@ import { fetchServices, type ServiceListItem } from "@/lib/api";
 
 type SortOption = "popular" | "fastest" | "cheapest";
 
+const CATEGORIES = ["all", "text", "code", "analysis"] as const;
+type Category = typeof CATEGORIES[number];
+
 export function ServiceGrid() {
   const [services, setServices] = useState<ServiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("popular");
+  const [category, setCategory] = useState<Category>("all");
 
   useEffect(() => {
     fetchServices()
@@ -40,10 +44,12 @@ export function ServiceGrid() {
     );
   }
 
-  const filtered = services.filter((svc) =>
-    svc.name.toLowerCase().includes(search.toLowerCase()) ||
-    svc.model.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = services.filter((svc) => {
+    const matchesSearch = svc.name.toLowerCase().includes(search.toLowerCase()) ||
+      svc.model.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = category === "all" || svc.category === category;
+    return matchesSearch && matchesCategory;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     if (sort === "popular") return b.metrics.totalRequests - a.metrics.totalRequests;
@@ -53,31 +59,48 @@ export function ServiceGrid() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search services or models..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-[#F7931A]"
-          />
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search services or models..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-[#F7931A]"
+            />
+          </div>
+          <div className="flex gap-2">
+            {(["popular", "fastest", "cheapest"] as SortOption[]).map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setSort(opt)}
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  sort === opt
+                    ? "bg-[#F7931A] text-black"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                }`}
+              >
+                {opt === "popular" ? "Popular" : opt === "fastest" ? "Fastest" : "Cheapest"}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-2">
-          {(["popular", "fastest", "cheapest"] as SortOption[]).map((opt) => (
+          {CATEGORIES.map((cat) => (
             <button
-              key={opt}
-              onClick={() => setSort(opt)}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                sort === opt
-                  ? "bg-[#F7931A] text-black"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              key={cat}
+              onClick={() => setCategory(cat)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                category === cat
+                  ? "bg-zinc-100 text-zinc-900"
+                  : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/50"
               }`}
             >
-              {opt === "popular" ? "Popular" : opt === "fastest" ? "Fastest" : "Cheapest"}
+              {cat === "all" ? "All" : cat === "text" ? "Text" : cat === "code" ? "Code" : "Analysis"}
             </button>
           ))}
         </div>
