@@ -277,7 +277,7 @@ const SERVICE_CONFIGS: Record<string, { name: string; model: string; systemPromp
   },
   "4": {
     name: "Text Summarizer Pro",
-    model: "nvidia/nemotron-3-super:free",
+    model: "nvidia/nemotron-3-super-120b-a12b:free",
     systemPrompt: "You are an expert text summarizer. Create a detailed but concise summary with key takeaways in bullet points. Include main points, conclusions, and any actionable items.",
     category: "text",
     price: "$0.01",
