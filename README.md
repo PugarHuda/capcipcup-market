@@ -1,6 +1,6 @@
 # CapCipCup Market
 
-**AI Inference Marketplace on Mezo — Pay per request with Bitcoin-backed MUSD via x402.**
+**AI Inference Marketplace on Mezo — Pay per request with Bitcoin-backed MUSD.**
 
 > Built for the **Mezo Hackathon 2026** (MUSD Track)
 
@@ -25,11 +25,12 @@ AI services today require credit cards, subscriptions, and accounts. AI agents t
 ## The Solution
 
 CapCipCup combines:
-- **x402 protocol** for HTTP-native MUSD micropayments (zero gas for buyers)
+- **MUSD micropayments** for HTTP-native per-request payments (zero gas for buyers)
 - **On-chain service registry** where providers stake MEZO to list services
 - **AgentVault** smart contract for AI agents to spend MUSD autonomously within daily limits
-- **Marketplace UI** for discovering, comparing, and consuming AI services
-- **Multi-model support** with different AI providers and pricing tiers
+- **Real on-chain payment verification** — backend verifies actual MUSD Transfer events on Mezo Testnet
+- **Persistent state via Upstash Redis** — free tier, metrics, rate limits survive serverless cold starts
+- **Multi-model marketplace** with different AI providers and pricing tiers
 
 ## How It Works
 
@@ -38,24 +39,25 @@ PROVIDER (owns AI model)              CONSUMER (human or AI agent)
     │                                      │
     ├── Stake MEZO to register             ├── Browse marketplace
     ├── Set price per request              ├── Try free (3 requests)
-    ├── Service goes live                  ├── Pay per request (MUSD)
+    ├── Service goes live                  ├── Pay MUSD per request
     │                                      │
-    │          ┌──────────────┐            │
-    └─────────►│  CapCipCup   │◄───────────┘
-               │  Proxy + x402│
-               │  (zero gas)  │
-               └──────────────┘
-                     │
-              Provider gets MUSD
-              Consumer gets AI result
-              All on Mezo testnet
+    │          ┌──────────────────┐        │
+    └─────────►│   CapCipCup API  │◄───────┘
+               │  On-chain verify │
+               │  + AI inference  │
+               └──────────────────┘
+                       │
+                Provider gets MUSD
+                Consumer gets AI result
+                All verified on Mezo Testnet
 ```
 
 ### For Human Users
-1. Open marketplace → browse AI services with search/filter
-2. Click "Try Free" → get result without wallet
+1. Open marketplace → browse AI services with search/filter/category
+2. Click "Try Free" → get result without wallet (3 free per service)
 3. After free tier exhausted → connect wallet → transfer MUSD → get result
 4. Leave on-chain reviews (1-5 stars) for services used
+5. Compare services in Battle Mode
 
 ### For AI Agents
 1. Owner deposits MUSD into AgentVault smart contract
@@ -67,60 +69,70 @@ PROVIDER (owns AI model)              CONSUMER (human or AI agent)
 ## Features
 
 ### Core
-- 6 AI services across multiple models (GPT-OSS 120B, Nemotron 3 Super, DeepSeek V4)
-- Real ERC20 MUSD payment flow with on-chain verification
-- Free tier: 3 requests per wallet per service
+- 6 AI services across 3 models (GPT-OSS 120B, Nemotron 3 Super 120B, DeepSeek V4 Flash)
+- Real ERC20 MUSD payment flow with **on-chain transaction verification** via Mezo RPC
+- Free tier: 3 requests per wallet per service (persistent via Redis)
 - On-chain service registry with MEZO staking
 - Agent Vault with daily spending limits and operator management
+- Verified buyer reviews via `markAsBuyer` on-chain call after payment
+
+### Backend Security & Infrastructure
+- **On-chain payment verification**: Fetches transaction receipt, decodes ERC20 Transfer events, verifies from/to/amount
+- **Duplicate payment prevention**: Redis SET tracks all used txHashes
+- **Rate limiting**: 20 req/min per IP via Redis with 60s TTL
+- **Input sanitization**: 5,000 char max per request
+- **Persistent state**: Upstash Redis for free tier usage, metrics, rate limits (survives Vercel cold starts)
+- **markAsBuyer integration**: After verified payment, backend calls ReviewSystem on-chain so buyer can leave reviews
 
 ### Frontend
-- Polished landing page with hero section, how-it-works steps
-- Service discovery with search/filter and sort (popular, fastest, cheapest)
-- Playground with free tier + paid MUSD payments
-- On-chain review system (1-5 stars + comments)
-- Provider dashboard (register, view, delist services)
+- Service discovery with search, category filter (text/code/analysis), and sort (popular, fastest, cheapest)
+- Playground with free tier + paid MUSD payments (real ERC20 transfer)
+- On-chain review system (1-5 stars + comments, verified buyers only)
+- Battle Mode — compare two AI services side-by-side
+- Provider dashboard (register, view, delist services with MEZO staking)
 - Agent Vault dashboard (deposit, withdraw, set limits, manage operators)
-- Analytics page with marketplace-wide stats
+- Analytics page with marketplace-wide stats from Redis
 - Token balance display + testnet faucet (mint MUSD/MEZO)
-- Toast notifications for all transactions with explorer links
+- Toast notifications for all transactions with Mezo Explorer links
 - Mobile responsive with hamburger navigation
-- WalletConnect + injected wallet support
+- Custom 404 page and error boundary
+- SEO meta tags (OpenGraph, Twitter Card)
+- WalletConnect + injected wallet support (MetaMask, Rabby)
 
 ### Smart Contracts (Mezo Testnet)
 - `ServiceRegistry.sol` — Register/delist services, MEZO staking
 - `AgentVault.sol` — Deposit/withdraw MUSD, daily limits, operator management
-- `ReviewSystem.sol` — Verified buyer reviews (1-5 score + comment)
-- `MockMEZO.sol` — Testnet token with open mint
+- `ReviewSystem.sol` — Verified buyer reviews (1-5 score + comment, markAsBuyer gate)
+- `MockMEZO.sol` — Testnet token with open mint (simulates real MEZO)
 
 ### Backend
 - Express.js serverless API on Vercel
-- OpenRouter AI integration (6 models)
-- Free tier tracking per wallet
-- Paid endpoint with tx hash verification (no double-spend)
-- Metrics and analytics endpoints
-- Full CORS support
-
-### Agent
-- Autonomous "NewsBot" agent that calls services on interval
-- Real on-chain payment flow: vault → transfer → API
-- Demonstrates machine-to-machine MUSD payments
+- OpenRouter AI integration (3 models, 6 services)
+- Real on-chain payment verification via viem + Mezo RPC
+- Persistent state via Upstash Redis
+- Rate limiting (20 req/min/IP)
+- markAsBuyer on-chain call after verified payment
+- Input sanitization (5,000 char limit)
+- Full CORS support for frontend domain
 
 ## Architecture
 
 ```
-capcipcup/
+capcipcup-market/
 ├── contracts/          # Solidity smart contracts (Hardhat + Mezo Testnet)
 │   ├── ServiceRegistry.sol    — Provider registration + MEZO staking
 │   ├── AgentVault.sol         — MUSD vault + daily limits for agents
 │   ├── ReviewSystem.sol       — Verified buyer reviews
-│   └── MockMEZO.sol           — Testnet token
+│   └── MockMEZO.sol           — Testnet ERC20 token
 │
 ├── backend/            # Express.js serverless API (Vercel)
-│   └── api/index.ts    — Routes, AI proxy, payments, metrics
+│   ├── api/index.ts    — Routes, AI proxy, on-chain verification, Redis state
+│   ├── package.json    — Dependencies (express, viem, @upstash/redis)
+│   └── vercel.json     — Serverless function config
 │
 ├── frontend/           # Next.js 15 marketplace UI (Vercel)
-│   ├── app/             — Pages (explore, service, vault, provider, analytics)
-│   ├── components/      — Header, ServiceGrid, Playground, ReviewSection, Toast
+│   ├── app/             — Pages (explore, service, vault, provider, analytics, battle)
+│   ├── components/      — Header, Footer, ServiceGrid, Playground, ReviewSection, Toast
 │   └── lib/             — Contract ABIs, wagmi config, API client
 │
 └── agent/              # Autonomous agent demo
@@ -133,66 +145,60 @@ capcipcup/
 |-------|-----------|
 | Smart Contracts | Solidity 0.8.24, Hardhat, OpenZeppelin |
 | Blockchain | Mezo Testnet (chain 31611, EVM-compatible, BTC gas) |
-| Backend | Node.js, Express 5, TypeScript, Vercel Serverless |
+| Backend | Node.js, Express 5, TypeScript, viem 2, Vercel Serverless |
+| State | Upstash Redis (persistent free tier, metrics, rate limits, payments) |
 | Frontend | Next.js 15, TypeScript, Tailwind CSS, wagmi 2 + viem 2 |
-| Payments | x402 protocol, MUSD ERC20 transfers, AgentVault |
-| AI Models | OpenRouter (GPT-OSS 120B, Nemotron 3 Super, DeepSeek V4 Flash) |
+| Payments | MUSD ERC20 transfers + on-chain verification via Mezo RPC |
+| AI Models | OpenRouter (GPT-OSS 120B, Nemotron 3 Super 120B, DeepSeek V4 Flash) |
 | Wallets | MetaMask, Rabby, WalletConnect |
-| Hosting | Vercel (frontend + backend) |
+| Hosting | Vercel (frontend + backend serverless) |
 
 ## Key Addresses (Mezo Testnet)
 
 | Contract | Address |
 |----------|---------|
-| MUSD | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
+| MUSD (MockMEZO) | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
 | ServiceRegistry | `0x7Ca15Feda3a17B215035C984c2CAB8ee68f9416c` |
 | AgentVault | `0x3737f2DB9c9a68d4Ad8bCc6f092AEe5dbc21a5c1` |
 | ReviewSystem | `0xa5F1d1781bB50B41434E2f507667e22De3Df27a9` |
-| MockMEZO | `0x4C1B34C6650B63B8c43559a2bbB2CdA0eE5711ed` |
+| MockMEZO (Staking) | `0x4C1B34C6650B63B8c43559a2bbB2CdA0eE5711ed` |
+| Payment Receiver | `0xdbE1a6F994e3E4b6F6A7e36523e9a458C8Ed40Bb` |
 
 | Infra | Value |
 |-------|-------|
 | RPC | `https://rpc.test.mezo.org` |
 | Explorer | `https://explorer.test.mezo.org` |
 | Chain ID | `31611` |
-| x402 Facilitator | `https://facilitator.vativ.io/` |
 
 ## Hackathon Compliance
 
 | Requirement | How We Meet It |
 |-------------|---------------|
-| Integrate MUSD | x402 payments, AgentVault deposits, provider earnings — all in MUSD |
-| Integrate MEZO | Providers stake MEZO to register services on-chain |
-| Testnet demo | All contracts deployed and functional on Mezo Testnet |
+| Integrate MUSD | Real ERC20 MUSD payments verified on-chain, AgentVault deposits, provider earnings |
+| Integrate MEZO | Providers stake MEZO to register services on ServiceRegistry |
+| Testnet demo | All 4 contracts deployed and functional on Mezo Testnet |
 | MUSD Track fit | "Consumer experiences where MUSD powers payments and everyday apps" |
-| Working product | Live at capcipcup-market.vercel.app with real AI inference |
+| Working product | Live at capcipcup-market.vercel.app with real AI inference and payments |
+| Security | On-chain verification prevents payment fraud, Redis prevents replay attacks |
 
-## Roadmap Alignment
+## Security Model
 
-Mezo's 2026 roadmap explicitly states:
-
-> "AI-Ready Infrastructure — Mezo will explore infrastructure that better supports AI-agent interactions, including payment rails, agent-compatible endpoints, and tooling for autonomous transactions on the network. MUSD is well positioned to serve as a transaction and settlement asset in that environment."
-
-CapCipCup builds exactly this: a marketplace infrastructure where AI agents discover, consume, and pay for services with MUSD.
-
-## Unique Differentiators
-
-1. **Zero gas for buyers** — Mezo x402 facilitator pays gas. No BTC needed to consume.
-2. **Free trial system** — First 3 requests free per wallet. No wallet needed to try.
-3. **AgentVault** — Smart contract spending controls for autonomous AI agents.
-4. **MEZO staking** — Providers stake MEZO to register. Skin in the game.
-5. **Verified reviews** — Only wallets that used a service can review. No fake reviews.
-6. **Multi-model marketplace** — Different AI models at different price points.
-7. **Real payments** — Actual ERC20 MUSD transfers verified on-chain.
-8. **Bitcoin-native settlement** — MUSD backed by BTC, not fiat.
+| Attack Vector | Protection |
+|---------------|-----------|
+| Fake payment (random txHash) | On-chain verification via Mezo RPC — checks Transfer event logs |
+| Replay attack (reuse txHash) | Redis SET `verified_payments` — rejects duplicates |
+| Rate abuse | 20 req/min per IP via Redis INCR + 60s EXPIRE |
+| Input injection | 5,000 char limit + trim |
+| Fake reviews | markAsBuyer only called after verified payment — only real buyers can review |
+| Cold start state loss | Upstash Redis persists all state across Vercel serverless instances |
 
 ## Quick Start
 
 ### Prerequisites
 - Node.js 20+
-- pnpm 9+
-- MetaMask, Rabby, or any WalletConnect-compatible wallet
-- Mezo Testnet BTC (from faucet) for gas
+- npm or pnpm
+- MetaMask, Rabby, or any EVM wallet
+- Mezo Testnet BTC for gas (from faucet)
 
 ### Install & Run
 
@@ -202,13 +208,10 @@ git clone https://github.com/PugarHuda/capcipcup-market.git
 cd capcipcup-market
 
 # Backend
-cd backend && pnpm install && pnpm dev
+cd backend && npm install && npm run dev
 
 # Frontend (new terminal)
 cd frontend && pnpm install && pnpm dev
-
-# Agent (optional)
-cd agent && pnpm install && pnpm start
 ```
 
 ### Environment Variables
@@ -216,8 +219,12 @@ cd agent && pnpm install && pnpm start
 **Backend (.env)**
 ```
 OPENROUTER_API_KEY=sk-or-v1-...
-EVM_ADDRESS=0x...
-PRIVATE_KEY=0x...
+PRIVATE_KEY=0x...  (for markAsBuyer on-chain calls)
+PAYMENT_RECEIVER=0xdbE1a6F994e3E4b6F6A7e36523e9a458C8Ed40Bb
+REVIEW_SYSTEM_ADDRESS=0xa5F1d1781bB50B41434E2f507667e22De3Df27a9
+MUSD_ADDRESS=0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
 **Frontend (.env.local)**
@@ -228,19 +235,26 @@ NEXT_PUBLIC_SERVICE_REGISTRY_ADDRESS=0x7Ca15Feda3a17B215035C984c2CAB8ee68f9416c
 NEXT_PUBLIC_AGENT_VAULT_ADDRESS=0x3737f2DB9c9a68d4Ad8bCc6f092AEe5dbc21a5c1
 NEXT_PUBLIC_REVIEW_SYSTEM_ADDRESS=0xa5F1d1781bB50B41434E2f507667e22De3Df27a9
 NEXT_PUBLIC_MOCK_MEZO_ADDRESS=0x4C1B34C6650B63B8c43559a2bbB2CdA0eE5711ed
+NEXT_PUBLIC_PAYMENT_RECEIVER=0xdbE1a6F994e3E4b6F6A7e36523e9a458C8Ed40Bb
 ```
 
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/services` | List all services with metrics |
-| GET | `/api/service/:id/try?input=...` | Free tier inference |
-| GET | `/api/service/:id?input=...` | Paid inference (legacy) |
-| POST | `/api/service/:id/paid` | Paid inference with tx hash proof |
-| GET | `/api/metrics/:id` | Service metrics |
+| GET | `/` | API info |
+| GET | `/health` | Health check (persistence, verification status) |
+| GET | `/api/services` | List all services with real-time metrics |
+| GET | `/api/service/:id/try?input=...` | Free tier inference (3 per wallet) |
+| POST | `/api/service/:id/paid` | Paid inference with on-chain tx verification |
+| GET | `/api/metrics/:id` | Per-service metrics |
 | GET | `/api/stats` | Marketplace-wide analytics |
-| GET | `/health` | Health check |
+
+## QA Status
+
+Full QA report available in [`QA_REPORT.md`](./QA_REPORT.md).
+
+**37/37 tests passing** across backend API, frontend pages, smart contracts, security, and integration.
 
 ## License
 

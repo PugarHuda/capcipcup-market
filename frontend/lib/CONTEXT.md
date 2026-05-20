@@ -1,33 +1,49 @@
-# frontend/lib/ — Utility Libraries & Config
-
-> **For AI agents:** Shared utilities, blockchain config, API clients, and contract ABIs.
+# frontend/lib/ — Shared Libraries Context
 
 ## Files
 
-### wagmi.ts
-Wagmi v2 config for Mezo Testnet.
-- Defines `mezoTestnet` chain: ID 31611, BTC native currency, RPC `https://rpc.test.mezo.org`
-- Creates wagmi config with `injected()` connector (MetaMask, Rabby)
-- Exported as `wagmiConfig` — used in `app/providers.tsx`
+### `wagmi.ts`
+Wagmi configuration for Mezo Testnet:
+- Chain definition: id=31611, BTC native currency, rpc.test.mezo.org
+- Connectors: injected (MetaMask, Rabby) + WalletConnect (optional, needs NEXT_PUBLIC_WC_PROJECT_ID)
+- Transport: HTTP to Mezo Testnet RPC
 
-### contracts.ts
-Contract addresses and minimal ABIs for frontend use.
+### `contracts.ts`
+Contract addresses and ABIs:
 - `CONTRACT_ADDRESSES` — reads from `NEXT_PUBLIC_*` env vars
-- `MUSD_ADDRESS` — `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`
-- Minimal ABIs for: AgentVault, ServiceRegistry, ReviewSystem, ERC20
-- ABIs only include functions needed by the frontend (not full compilation output)
-- After compiling contracts, you can replace with full ABIs from `contracts/artifacts/`
+- `MUSD_ADDRESS` — MUSD token address
+- `ERC20_ABI` — Standard ERC20 (balanceOf, transfer, approve, allowance, mint)
+- `SERVICE_REGISTRY_ABI` — register, delist, getServicesByOwner, serviceCount
+- `AGENT_VAULT_ABI` — deposit, withdraw, setDailyLimit, approveOperator, revokeOperator, getVaultInfo
+- `REVIEW_SYSTEM_ABI` — rate, getReviews, getAverageScore
 
-### api.ts
-Backend API client functions.
-- `fetchServices()` → GET `/api/services` → list of services with metrics
-- `tryServiceFree(serviceId, input, wallet?)` → GET `/api/service/:id/try` → inference result
-- `fetchMetrics(serviceId)` → GET `/api/metrics/:id` → quality metrics
-- All functions use `NEXT_PUBLIC_BACKEND_URL` env var (default: `http://localhost:3000`)
-- Handles 402 responses gracefully (free tier exhausted message)
+### `api.ts`
+Backend API client functions:
+- `fetchServices()` — GET /api/services → ServiceListItem[]
+- `tryServiceFree(serviceId, input, walletAddress?)` — GET /api/service/:id/try
+- `fetchMetrics(serviceId)` — GET /api/metrics/:id
 
-## Adding Utilities
-- Keep files focused: one concern per file
-- Export types alongside functions
-- Use `NEXT_PUBLIC_` prefix for env vars that need client-side access
-- For contract reads, use wagmi `useReadContract` hook in components — don't fetch here
+All functions use `NEXT_PUBLIC_BACKEND_URL` for the base URL.
+
+## Key Types
+
+```typescript
+interface ServiceListItem {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
+  category?: string;
+  priceMusd: string;
+  freeTierLimit: number;
+  metrics: { totalRequests: number; successRate: string; avgResponseTimeMs: number; };
+}
+
+interface InferenceResponse {
+  serviceId: string;
+  output: string;
+  model: string;
+  responseTimeMs: number;
+  paidWith: string;
+}
+```

@@ -1,46 +1,37 @@
 # frontend/app/ — Next.js App Router Pages
 
-> **For AI agents:** All pages and layouts for the CapCipCup marketplace UI.
+## Pages
 
-## Architecture
-Next.js 15 App Router. Each folder = a route segment. `page.tsx` = the rendered page.
+| Route | File | Description |
+|-------|------|-------------|
+| `/` | `page.tsx` | Home — Hero section + ServiceGrid component |
+| `/service/[id]` | `service/[id]/page.tsx` | Service detail — metadata + Playground + ReviewSection |
+| `/battle` | `battle/page.tsx` | Battle Mode — compare two services side-by-side |
+| `/vault` | `vault/page.tsx` | Agent Vault — deposit/withdraw/limits/operators |
+| `/provider` | `provider/page.tsx` | Provider — list services + register new |
+| `/analytics` | `analytics/page.tsx` | Analytics — marketplace stats from backend + on-chain |
 
-## Files
+## Special Files
 
-### layout.tsx (Root Layout)
-- Wraps entire app with `<Providers>` (wagmi + react-query)
-- Includes `<Header>` navigation
-- Sets dark theme (`className="dark"`, bg-zinc-950)
-- Uses Inter font from Google Fonts
-- Meta title: "CapCipCup Market — AI Inference Marketplace on Mezo"
+| File | Purpose |
+|------|---------|
+| `layout.tsx` | Root layout — Providers (wagmi), Header, Footer, global metadata |
+| `error.tsx` | Global error boundary — catches component crashes, shows retry button |
+| `not-found.tsx` | Custom 404 — "Page Not Found" with link back to marketplace |
 
-### providers.tsx
-Client component wrapping `WagmiProvider` + `QueryClientProvider`.
-- Must be `"use client"` — wagmi needs browser APIs
-- Creates QueryClient in useState to avoid SSR issues
+## Per-Page SEO
 
-### globals.css
-Tailwind directives + CSS custom properties:
-- `--bitcoin-orange: #F7931A` (brand accent)
-- `--mezo-red: #E5383B` (secondary)
+Each major route has a `layout.tsx` with exported `metadata` for page-specific titles:
+- `/battle/layout.tsx` — "Battle Mode | CapCipCup Market"
+- `/vault/layout.tsx` — "Agent Vault | CapCipCup Market"
+- `/provider/layout.tsx` — "Provider Dashboard | CapCipCup Market"
+- `/analytics/layout.tsx` — "Analytics | CapCipCup Market"
 
-### page.tsx (Home — `/`)
-Server component. Renders hero text + `<ServiceGrid>`.
-Headline: "AI Services, Paid with Bitcoin"
+## Data Flow
 
-## Subfolders
-
-### service/[id]/ → `/service/:id`
-Dynamic route for individual service detail + playground.
-Client component — uses `useParams()` to get service ID.
-
-### vault/ → `/vault`
-Agent Vault dashboard. Placeholder for now.
-Will contain: deposit MUSD, set daily limit, approve agents.
-
-## Adding a New Page
-1. Create folder: `app/my-page/`
-2. Add `page.tsx` inside it
-3. Default export a React component
-4. Add nav link in `components/layout/Header.tsx`
-5. Server component by default — add `"use client"` only if needs hooks/browser APIs
+- **Home page**: Fetches services from backend on client mount
+- **Service detail**: Fetches service info from backend + reads contract data (reviews)
+- **Battle**: Calls backend /try endpoint for both services in parallel
+- **Vault**: All data from on-chain reads (AgentVault contract)
+- **Provider**: All data from on-chain reads (ServiceRegistry contract)
+- **Analytics**: Hybrid — backend /api/stats + on-chain serviceCount

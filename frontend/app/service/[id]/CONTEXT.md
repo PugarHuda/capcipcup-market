@@ -1,21 +1,16 @@
 # frontend/app/service/[id]/ — Service Detail Page
 
-> **For AI agents:** Dynamic page for a single AI service.
+## File: page.tsx
 
-## page.tsx
-- Route: `/service/:id` (e.g., `/service/1`)
-- Client component (`"use client"`) — needs `useParams()` hook
-- Renders `<Playground serviceId={id} />`
+Client component that:
+1. Extracts `id` from URL params
+2. Fetches all services from backend API
+3. Finds the matching service by ID
+4. Renders service metadata (name, model, category, price)
+5. Renders `Playground` component with serviceId and priceMusd
+6. Renders `ReviewSection` component with serviceId
 
-## What Playground Does
-See `components/services/Playground.tsx`:
-- Text input area for user's prompt
-- "Try Free" button → calls `/api/service/:id/try` (free tier)
-- "Pay $0.005 MUSD" button → opens paid endpoint in new tab (x402 paywall)
-- Shows result with model name, response time, payment method
+## Props Passed
 
-## TODO Enhancements
-- Fetch and display service metadata (name, description, MEZO staked) from contract
-- Show free tier counter ("2 of 3 remaining")
-- Add reviews section below playground
-- Add quality metrics sidebar
+- `Playground`: `serviceId={id}`, `priceMusd={price without $ sign}`
+- `ReviewSection`: `serviceId={id}`

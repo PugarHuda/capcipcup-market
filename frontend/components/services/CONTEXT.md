@@ -1,37 +1,33 @@
-# frontend/components/services/ — Service Marketplace Components
-
-> **For AI agents:** Components for browsing, displaying, and using AI services.
+# frontend/components/services/ — Service UI Components
 
 ## Files
 
-### ServiceCard.tsx
-Card component for the explore grid. Displays:
-- Service name (hover → orange)
-- Model name
-- Price in MUSD
-- Quality metrics (avg response time, success rate)
-- Free tier availability
-- Two buttons: "Try Free" and "Use Service" — both link to `/service/:id`
+### `ServiceGrid.tsx`
+Main marketplace grid on the home page:
+- Fetches services from backend API on mount
+- Search input filters by name/model
+- Category filter pills: All, Text, Code, Analysis
+- Sort options: Popular (most requests), Fastest (lowest latency), Cheapest (lowest price)
+- Renders ServiceCard for each filtered/sorted service
 
-Props: `{ id, name, model, priceMusd, freeTierLimit, metrics }`
+### `ServiceCard.tsx`
+Individual service card in the grid:
+- Displays: name, model, category badge, price
+- "Try Service →" button links to /service/:id
+- Hover state with border highlight
 
-### ServiceGrid.tsx
-Grid layout that fetches and renders ServiceCards.
-- Calls `fetchServices()` from `lib/api.ts` on mount
-- Shows loading skeletons while fetching
-- Shows empty state if no services
-- Responsive: 1 col mobile, 2 col tablet, 3 col desktop
-
-### Playground.tsx
-Interactive try-it panel on service detail page.
+### `Playground.tsx`
+Interactive try-it panel on service detail page:
 - Textarea for user input
-- "Try Free" button → calls `tryServiceFree()` from `lib/api.ts`
-- "Pay $0.005 MUSD" button → opens backend paid endpoint in new tab (x402 paywall renders there)
-- Shows result card with output, model, response time, payment method
-- Shows error state with red border
-- Uses connected wallet address from wagmi for free tier tracking
+- "Try Free" button → calls tryServiceFree() from lib/api
+- "Pay X MUSD" button → triggers ERC20 transfer via wagmi, then calls paid endpoint
+- Displays result with model, response time, payment method
+- Handles 402 (free tier exhausted) and error states
+- Uses useWriteContract + useWaitForTransactionReceipt for payment flow
 
-## TODO Components
-- **BattleMode.tsx** — Side-by-side comparison of 2 services on same input (stretch goal)
-- **ReviewList.tsx** — Display reviews from ReviewSystem contract
-- **MetricsPanel.tsx** — Chart/stats for service quality metrics
+### `ReviewSection.tsx`
+On-chain reviews for a service:
+- Reads reviews from ReviewSystem contract (useReadContract)
+- Displays average score (stars) and individual reviews
+- Submit form (score 1-5 + comment) — writes to ReviewSystem.rate()
+- Only shown to connected wallets (must be verified buyer via markAsBuyer)

@@ -1,24 +1,35 @@
-# frontend/app/vault/ — Agent Vault Dashboard
+# frontend/app/vault/ — Agent Vault Page
 
-> **For AI agents:** Page for managing AgentVault smart contract — deposit MUSD, set limits, approve agents.
+## Purpose
 
-## page.tsx
-- Route: `/vault`
-- Client component — needs wallet connection
-- Currently a placeholder with basic text
+Dashboard for managing AI agent spending. Users deposit MUSD into the AgentVault smart contract, set daily limits, and approve agent wallet addresses as operators.
 
-## What It Should Become (TODO)
-1. **Vault Status Panel** — Show connected wallet's vault balance and daily limit (read from AgentVault contract via `useReadContract`)
-2. **Deposit Form** — Input MUSD amount → approve MUSD spend → call `vault.deposit(amount)`
-3. **Set Daily Limit** — Input amount → call `vault.setDailyLimit(amount)`
-4. **Operator Management** — List approved agents, add new (address input → `approveOperator()`), revoke existing
-5. **Spending History** — Show per-operator spent vs limit, last reset time
+## Components (all in page.tsx)
 
-## Contract Interactions
-All writes need connected wallet. Use wagmi hooks:
-- `useReadContract` for view functions (getVaultInfo, getOperatorSpent)
-- `useWriteContract` for state changes (deposit, withdraw, setDailyLimit, approveOperator)
-- MUSD `approve()` must be called before `deposit()` (standard ERC-20 pattern)
+- `VaultPage` — Main page, checks wallet connection
+- `VaultDashboard` — Shows stats + forms when connected
+- `StatCard` — Display card for balance/limit/wallet
+- `DepositForm` — Two-step: approve MUSD → deposit into vault
+- `WithdrawForm` — Withdraw MUSD from vault
+- `SetLimitForm` — Update daily spending limit
+- `OperatorForm` — Approve/revoke agent wallet addresses
 
-## ABI
-See `lib/contracts.ts` → `AGENT_VAULT_ABI` for minimal ABI. Expand as needed from compiled artifacts.
+## Contract Interaction
+
+Uses AgentVault at `CONTRACT_ADDRESSES.agentVault`:
+- `getVaultInfo(address)` → [balance, dailyLimit]
+- `deposit(amount)` — requires prior MUSD approval
+- `withdraw(amount)`
+- `setDailyLimit(amount)`
+- `approveOperator(address)`
+- `revokeOperator(address)`
+
+Also reads MUSD balance via ERC20 `balanceOf`.
+
+## Flow
+
+1. User connects wallet
+2. Page reads vault info + MUSD balance
+3. User can deposit (approve → deposit), withdraw, set limit, or manage operators
+4. Each action uses useWriteContract → useWaitForTransactionReceipt → refetch
+5. Toast notification on success with explorer link

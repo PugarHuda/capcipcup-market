@@ -5,145 +5,135 @@
 ## What This Folder Does
 
 Next.js 15 App Router frontend for the CapCipCup marketplace. Users can:
-1. Browse available AI services
-2. Try services for free (limited per wallet)
-3. Pay per-request with MUSD via x402
-4. Manage AgentVault deposits and spending limits
-5. View service quality metrics and reviews
+1. Browse AI services with search, category filter, and sort
+2. Try services for free (3 per wallet per service)
+3. Pay per-request with MUSD (real ERC20 transfer on Mezo Testnet)
+4. Compare services in Battle Mode
+5. Manage AgentVault deposits and spending limits
+6. View marketplace analytics with real-time data
+7. Leave on-chain reviews for services (verified buyers only)
+8. Register as a provider by staking MEZO
 
 ## Tech Stack
 
 - **Framework:** Next.js 15, App Router, TypeScript
-- **Styling:** Tailwind CSS + shadcn/ui components
-- **Wallet:** wagmi v2 + viem for Mezo Testnet wallet connection
-- **Data fetching:** Server components for static data, client components for wallet interaction
-- **Backend API:** `http://localhost:3000` (Express x402 server)
+- **Styling:** Tailwind CSS (dark theme, Bitcoin orange #F7931A accent)
+- **Wallet:** wagmi v2 + viem v2 for Mezo Testnet wallet connection
+- **State:** Client-side React state + backend API calls
+- **Backend:** `https://capcipcup-api.vercel.app` (production)
 
 ## Pages
 
-### `/` — Home / Explore Marketplace (MUST BUILD)
-Main page. Shows all available AI services in a grid.
-Each card displays: name, price, model, rating, success rate, free tier remaining.
-"Try Free" and "Use Service" buttons per card.
+### `/` — Home / Marketplace
+- Hero section with value proposition
+- Service grid with search input, category filter (All/Text/Code/Analysis), sort (popular/fastest/cheapest)
+- Each service card: name, model, category badge, price, "Try Service" button
 
-### `/service/[id]` — Service Detail (MUST BUILD)
-Full service page with:
-- Service info (name, description, provider, price, MEZO staked)
-- "Try it" playground: text input → submit → see result
-- Free tier counter ("2 of 3 free requests remaining")
-- Quality metrics (response time, success rate, total requests)
-- Reviews section (from ReviewSystem contract)
+### `/service/[id]` — Service Detail + Playground
+- Service metadata (name, model, price, category)
+- **Playground**: textarea input → "Try Free" button OR "Pay X MUSD" button
+- Free tier: sends to `/api/service/:id/try` (GET)
+- Paid: triggers MUSD ERC20 transfer via wallet → then calls `/api/service/:id/paid` (POST with txHash)
+- On-chain review section (read reviews from ReviewSystem, submit new review)
 
-### `/vault` — Agent Vault Dashboard (SHOULD BUILD)
-For users managing AI agent spending:
-- Deposit MUSD into vault (write to AgentVault contract)
-- Set daily spending limit
-- Approve/revoke agent wallet addresses
-- View spending history per agent
-- Current vault balance and remaining daily budget
+### `/battle` — Battle Mode
+- Select two services from dropdowns
+- Enter same input for both
+- Both called in parallel, results displayed side-by-side
+- Shows response time comparison and "Faster" badge
 
-### `/provider` — Provider Dashboard (COULD BUILD)
-For AI service providers:
-- Registration guide (stake MEZO, register service)
-- Revenue analytics (total earned, requests served)
-- Service management (update endpoint, price, delist)
+### `/vault` — Agent Vault Dashboard
+- Shows vault balance, daily limit, wallet MUSD balance
+- Deposit form (approve + deposit in two steps)
+- Withdraw form
+- Set daily limit form
+- Operator management (approve/revoke agent wallets)
+
+### `/provider` — Provider Dashboard
+- Lists user's registered services with delist option
+- Registration form: name, endpoint, price, MEZO stake amount
+- Two-step: approve MEZO → register on ServiceRegistry
+
+### `/analytics` — Marketplace Analytics
+- Grid of stat cards: on-chain services, API services, total requests, success rate, paid requests, MUSD volume, avg response time, network
+- "How It Works" explainer section
+- Data from both backend `/api/stats` and on-chain `ServiceRegistry.serviceCount()`
+
+### Error Handling
+- `/error.tsx` — Global error boundary with retry button
+- `/not-found.tsx` — Custom 404 page with back-to-marketplace link
 
 ## Component Structure
 
 ```
 frontend/
 ├── app/
-│   ├── layout.tsx          — Root layout with WagmiProvider + wallet connect
-│   ├── page.tsx            — Home/Explore marketplace
-│   ├── service/
-│   │   └── [id]/
-│   │       └── page.tsx    — Service detail + playground
-│   ├── vault/
-│   │   └── page.tsx        — Agent vault dashboard
-│   └── provider/
-│       └── page.tsx        — Provider dashboard
+│   ├── layout.tsx             — Root layout (Providers, Header, Footer, SEO metadata)
+│   ├── page.tsx               — Home/Marketplace (hero + ServiceGrid)
+│   ├── error.tsx              — Global error boundary
+│   ├── not-found.tsx          — Custom 404 page
+│   ├── service/[id]/page.tsx  — Service detail + Playground + Reviews
+│   ├── battle/page.tsx        — Battle Mode
+│   ├── vault/page.tsx         — Agent Vault dashboard
+│   ├── provider/page.tsx      — Provider dashboard + registration
+│   └── analytics/page.tsx     — Marketplace analytics
 │
 ├── components/
 │   ├── layout/
-│   │   ├── Header.tsx      — Nav bar with wallet connect button
-│   │   └── Footer.tsx      — Footer
+│   │   ├── Header.tsx         — Nav bar + wallet connect (desktop + mobile)
+│   │   └── Footer.tsx         — Footer with links + hackathon info
 │   ├── services/
-│   │   ├── ServiceCard.tsx — Card for explore grid
-│   │   ├── ServiceGrid.tsx — Grid of cards
-│   │   └── Playground.tsx  — Try-it input/output panel
-│   ├── vault/
-│   │   ├── DepositForm.tsx — Deposit MUSD form
-│   │   └── AgentList.tsx   — Approved agents with spending
-│   └── ui/                 — shadcn/ui components (button, card, input, etc.)
+│   │   ├── ServiceCard.tsx    — Card for explore grid
+│   │   ├── ServiceGrid.tsx    — Grid with search/filter/sort
+│   │   ├── Playground.tsx     — Try-it free/paid panel
+│   │   └── ReviewSection.tsx  — On-chain reviews display + form
+│   └── ui/
+│       └── Toast.tsx          — Toast notifications with tx explorer links
 │
 ├── lib/
-│   ├── wagmi.ts            — Wagmi config for Mezo Testnet
-│   ├── contracts.ts        — Contract addresses + ABIs
-│   ├── api.ts              — Backend API client functions
-│   └── utils.ts            — Formatting helpers (MUSD amounts, etc.)
+│   ├── wagmi.ts               — Wagmi config (Mezo Testnet, MetaMask, WalletConnect)
+│   ├── contracts.ts           — Contract addresses + ABIs (ServiceRegistry, AgentVault, ReviewSystem, ERC20)
+│   └── api.ts                 — Backend API client (fetchServices, tryServiceFree, fetchMetrics)
 │
-└── public/
-    └── ...                 — Static assets
+└── .env.local                 — Environment variables
 ```
 
-## Wallet Configuration (wagmi)
+## Key Contracts Integration
 
-```typescript
-// Mezo Testnet chain definition
-const mezoTestnet = {
-  id: 31611,
-  name: "Mezo Testnet",
-  nativeCurrency: { name: "Bitcoin", symbol: "BTC", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.test.mezo.org"] } },
-  blockExplorers: { default: { name: "Mezo Explorer", url: "https://explorer.test.mezo.org" } },
-};
+| Contract | Frontend Usage |
+|----------|---------------|
+| ServiceRegistry | Provider page: register/delist, Analytics: serviceCount |
+| AgentVault | Vault page: deposit/withdraw/setLimit/operators |
+| ReviewSystem | Service detail: getReviews/getAverageScore/rate |
+| MUSD (ERC20) | Playground: transfer for payment, Vault: approve+deposit, Balance display |
+| MockMEZO | Provider: approve+stake for registration |
+
+All contract reads use wagmi `useReadContract`. All writes use `useWriteContract` + `useWaitForTransactionReceipt`.
+
+## Payment Flow (Frontend)
+
 ```
-
-Supported wallets: MetaMask, Rabby, WalletConnect (via wagmi connectors).
-
-## How Services Are Displayed
-
-1. Frontend calls `GET /api/services` on backend → gets list with metrics
-2. For contract data (MEZO staked, reviews), frontend reads directly from contracts via wagmi `useReadContract`
-3. Hybrid: backend provides dynamic data (metrics, pricing), contracts provide trustless data (staking, reviews)
-
-## How "Try Free" Works
-
-1. User clicks "Try Free" on service card
-2. Frontend sends `GET /api/service/:id/try?input=user_text` with `x-wallet-address` header
-3. Backend checks free tier limit → serves if available
-4. Result displayed in playground panel
-5. Counter updates: "2 of 3 free requests remaining"
-
-## How Paid Requests Work
-
-1. User clicks "Use Service ($0.005 MUSD)"
-2. Frontend opens `http://localhost:3000/api/service/:id?input=user_text` in an iframe or new tab
-3. x402 paywall UI renders (server-side, from `@x402/paywall`)
-4. User connects wallet → signs MUSD payment → result appears
-5. OR: Frontend uses programmatic x402 (advanced, stretch goal):
-   - Call backend via fetch → receive 402 → handle payment in JS → retry
-
-For hackathon: option 1 (open in new tab) is simpler and reliable.
-
-## Design Guidelines
-
-- **Color scheme:** Dark theme, Bitcoin orange (#F7931A) as accent
-- **Typography:** Inter or system font
-- **Cards:** Rounded corners, subtle borders, hover effects
-- **Layout:** Max-width container (1200px), responsive grid
-- **Spacing:** Generous padding, clean whitespace
-- **Status indicators:** Green for active, red for errors, orange for warnings
+1. User enters text in Playground
+2. Clicks "Pay X MUSD"
+3. Frontend calls writeContract(MUSD.transfer(PAYMENT_RECEIVER, amount))
+4. Wallet prompts user to confirm
+5. useWaitForTransactionReceipt watches for confirmation
+6. On success: calls POST /api/service/:id/paid with { input, txHash, payer: address }
+7. Backend verifies on-chain → returns AI result
+8. Frontend displays result
+```
 
 ## Environment Variables
 
 ```env
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3000
-NEXT_PUBLIC_CHAIN_ID=31611
-NEXT_PUBLIC_SERVICE_REGISTRY_ADDRESS=0x...
-NEXT_PUBLIC_AGENT_VAULT_ADDRESS=0x...
-NEXT_PUBLIC_REVIEW_SYSTEM_ADDRESS=0x...
+NEXT_PUBLIC_BACKEND_URL=https://capcipcup-api.vercel.app
 NEXT_PUBLIC_MUSD_ADDRESS=0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503
+NEXT_PUBLIC_SERVICE_REGISTRY_ADDRESS=0x7Ca15Feda3a17B215035C984c2CAB8ee68f9416c
+NEXT_PUBLIC_AGENT_VAULT_ADDRESS=0x3737f2DB9c9a68d4Ad8bCc6f092AEe5dbc21a5c1
+NEXT_PUBLIC_REVIEW_SYSTEM_ADDRESS=0xa5F1d1781bB50B41434E2f507667e22De3Df27a9
+NEXT_PUBLIC_MOCK_MEZO_ADDRESS=0x4C1B34C6650B63B8c43559a2bbB2CdA0eE5711ed
+NEXT_PUBLIC_PAYMENT_RECEIVER=0xdbE1a6F994e3E4b6F6A7e36523e9a458C8Ed40Bb
+NEXT_PUBLIC_WC_PROJECT_ID=              # Optional: WalletConnect project ID
 ```
 
 ## How to Run
@@ -155,10 +145,29 @@ cp .env.example .env.local  # Fill in values
 pnpm dev                     # Starts on port 3001
 ```
 
+## Deployment
+
+- Platform: Vercel
+- Project: `capcipcup-market`
+- URL: `https://capcipcup-market.vercel.app`
+- Auto-deploy from GitHub (master branch)
+
+## Design System
+
+- **Theme:** Dark (zinc-950 background)
+- **Accent:** Bitcoin orange `#F7931A`
+- **Font:** Inter (via next/font)
+- **Cards:** rounded-xl, border-zinc-800, bg-zinc-900/50
+- **Buttons primary:** bg-[#F7931A] text-black
+- **Buttons secondary:** bg-zinc-800 text-zinc-300
+- **Status:** emerald for success, red for errors, yellow for warnings
+- **Layout:** max-w-6xl container, responsive grid (1/2/3/4 cols)
+
 ## Gotchas
 
-1. **x402 paywall renders server-side.** Don't try to embed it in a React component. Open paid endpoints in a new tab or iframe.
-2. **wagmi needs client-side rendering.** Wrap wallet components in `"use client"` directive.
-3. **Contract reads are free.** Use `useReadContract` freely for display data. Writes need connected wallet.
-4. **MUSD has 18 decimals.** Use `formatEther` for display, `parseEther` for inputs.
-5. **Backend CORS.** Backend must allow requests from `http://localhost:3001`.
+1. **All wallet components are "use client"** — wagmi hooks require client-side rendering
+2. **Contract reads are free** — use `useReadContract` freely. Writes need connected wallet.
+3. **MUSD has 18 decimals** — use `formatEther` for display, `parseEther` for inputs
+4. **useEffect for tx success** — side effects on transaction confirmation must be in useEffect to avoid infinite re-renders
+5. **Backend CORS** — Backend allows `*.vercel.app` origins and localhost
+6. **WalletConnect is optional** — Falls back to injected wallets (MetaMask, Rabby) if no project ID configured

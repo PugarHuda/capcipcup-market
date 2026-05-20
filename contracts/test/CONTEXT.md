@@ -1,31 +1,19 @@
-# contracts/test/ — Smart Contract Tests
+# contracts/test/ — Contract Tests
 
-> **For AI agents:** Hardhat + Chai tests for all Solidity contracts.
+## Purpose
 
-## Files
+Hardhat tests for smart contract functionality.
 
-### ServiceRegistry.test.ts
-Tests for ServiceRegistry contract:
-- `register()` — stakes MEZO, creates service, emits event
-- Rejects stake below minimum
-- `delist()` — returns MEZO, sets inactive
-- Rejects delist by non-owner
-- `getAllActive()` — filters delisted services
+## Running Tests
 
-## How to Run
 ```bash
 cd contracts
 npx hardhat test
-npx hardhat test test/ServiceRegistry.test.ts  # Single file
 ```
 
-## Adding Tests
-- Use `ethers.getSigners()` for test accounts
-- Deploy fresh contracts in `beforeEach`
-- Use `MockMEZO.mint()` to fund test accounts
-- Test both happy path and revert cases
-- Pattern: deploy → setup → act → assert
+## Test Coverage
 
-## Missing Tests (TODO)
-- `AgentVault.test.ts` — deposit, withdraw, daily limit, operator approval, requestFunds
-- `ReviewSystem.test.ts` — markAsBuyer, rate, getAverageScore, duplicate review rejection
+- MockMEZO: mint, transfer, balanceOf
+- ServiceRegistry: register, delist, getServicesByOwner
+- AgentVault: deposit, withdraw, setDailyLimit, approveOperator, requestFunds
+- ReviewSystem: markAsBuyer, rate, getReviews, getAverageScore

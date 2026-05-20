@@ -1,22 +1,22 @@
-# frontend/app/service/ — Service Routes
+# frontend/app/service/ — Service Detail Pages
 
-> **For AI agents:** Dynamic route segment for individual AI service pages.
+## Route
 
-## Structure
-```
-service/
-└── [id]/
-    └── page.tsx    → renders at /service/1, /service/2, etc.
-```
+`/service/[id]` — Dynamic route for individual service pages.
 
-## [id]/page.tsx
-Client component that:
-1. Reads service ID from URL params via `useParams()`
-2. Renders `<Playground serviceId={id} />` component
-3. Playground handles both free trial and paid usage
+## What It Shows
 
-## Future Additions
-- Add `loading.tsx` for suspense fallback
-- Add service metadata (name, description) above playground
-- Add reviews section (reads from ReviewSystem contract)
-- Add metrics panel (calls `/api/metrics/:id`)
+1. Service metadata (name, model, price, category) fetched from backend
+2. Playground component for trying the service (free + paid)
+3. ReviewSection component for on-chain reviews
+
+## Data Flow
+
+- Fetches service info from `GET /api/services` (filters by ID)
+- Playground handles free tier (GET /try) and paid (POST /paid with txHash)
+- Reviews read from ReviewSystem contract on-chain
+
+## Key Components Used
+
+- `Playground` from `@/components/services/Playground`
+- `ReviewSection` from `@/components/services/ReviewSection`

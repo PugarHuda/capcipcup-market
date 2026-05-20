@@ -21,10 +21,12 @@ For autonomous AI agents, the AgentVault smart contract allows owners to deposit
 
 ### How it's built
 - **Smart Contracts**: 4 Solidity contracts (ServiceRegistry, AgentVault, ReviewSystem, MockMEZO) deployed on Mezo Testnet
-- **Backend**: Express.js serverless API on Vercel with OpenRouter AI integration (6 models including GPT-OSS 120B, Nemotron 3 Super, DeepSeek V4 Flash)
+- **Backend**: Express.js serverless API on Vercel with OpenRouter AI integration (3 models: GPT-OSS 120B, Nemotron 3 Super 120B, DeepSeek V4 Flash)
 - **Frontend**: Next.js 15 with wagmi/viem for wallet interaction, Tailwind CSS for UI
 - **Agent**: Autonomous Node.js agent that requests funds from AgentVault and pays for AI services on-chain
-- **Payments**: Real ERC20 MUSD transfers verified by tx hash, with duplicate-spend prevention
+- **Payments**: Real ERC20 MUSD transfers with **full on-chain verification** — backend fetches tx receipt from Mezo RPC, decodes Transfer event logs, verifies from/to/amount
+- **Persistence**: Upstash Redis for state (free tier usage, metrics, rate limits, verified payments) — survives Vercel cold starts
+- **Security**: On-chain payment verification prevents fake payments, Redis SET prevents replay attacks, rate limiting (20 req/min/IP), input sanitization (5K char limit), markAsBuyer for verified-only reviews
 
 ### Key features
 1. **6 AI services** across 3 different models with varying price points ($0.003 - $0.01 MUSD)
@@ -58,10 +60,14 @@ Mezo's 2026 roadmap states: "AI-Ready Infrastructure — Mezo will explore infra
 - **GitHub**: https://github.com/PugarHuda/capcipcup-market
 
 ## Contracts (Mezo Testnet - Chain 31611)
+- MUSD Token: `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`
 - ServiceRegistry: `0x7Ca15Feda3a17B215035C984c2CAB8ee68f9416c`
 - AgentVault: `0x3737f2DB9c9a68d4Ad8bCc6f092AEe5dbc21a5c1`
 - ReviewSystem: `0xa5F1d1781bB50B41434E2f507667e22De3Df27a9`
-- MockMEZO: `0x4C1B34C6650B63B8c43559a2bbB2CdA0eE5711ed`
+- MockMEZO (Staking): `0x4C1B34C6650B63B8c43559a2bbB2CdA0eE5711ed`
+
+## QA Status
+37/37 automated tests passing. Full report in QA_REPORT.md.
 
 ## Team
 Solo developer — PugarHuda

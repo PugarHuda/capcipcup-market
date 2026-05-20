@@ -1,25 +1,27 @@
-# contracts/scripts/ — Deployment & Utility Scripts
+# contracts/scripts/ — Deployment Scripts
 
-> **For AI agents:** Hardhat scripts for deploying contracts to Mezo Testnet.
+## Purpose
 
-## Files
+Hardhat deployment scripts for deploying contracts to Mezo Testnet.
 
-### deploy.ts
-Deploys all contracts in order:
-1. `MockMEZO` — testnet ERC-20 mock, mints 10,000 to deployer
-2. `ServiceRegistry(mezoAddress, minStake=100e18)` — uses MockMEZO address
-3. `AgentVault(musdAddress)` — uses real MUSD `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503`
-4. `ReviewSystem(proxyAddress)` — uses deployer address (or backend wallet)
+## Usage
 
-Prints all deployed addresses at the end. Copy these to `.env`.
-
-## How to Run
 ```bash
+cd contracts
 npx hardhat run scripts/deploy.ts --network mezoTestnet
 ```
 
-## Adding New Scripts
-- Follow same pattern: `async function main()` + `main().catch(...)`
-- Import from `hardhat` not `ethers` directly
-- Always log deployed addresses clearly
-- Gas is BTC on Mezo — deployer wallet needs testnet BTC from faucet
+## Network Config (hardhat.config.ts)
+
+```typescript
+mezoTestnet: {
+  url: "https://rpc.test.mezo.org",
+  chainId: 31611,
+  accounts: [process.env.PRIVATE_KEY]
+}
+```
+
+## Current Deployed Addresses
+
+All contracts are already deployed. Re-deployment is only needed if contract logic changes.
+See root `CONTEXT.md` for all addresses.
